@@ -1,77 +1,99 @@
-using System;
-using UnityEditor.Callbacks;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
     [SerializeField] private float baseSpeed;
     [SerializeField] private float dashSpeed;
     [SerializeField] private float dashDuration;
-    private bool isDashing;
+
+
+    private PlayerInputActions inputActions;
+    private Vector2 moveInput;
+    private InputAction moveAction;
+    private InputAction jumpAction;
+    private InputAction dashAction;
+
+    private bool isDashing = false;
     private float dashTime;
-    private enum D {
-        u, d, l, r, ul, ur, dl, dr, none
-    }
-    private D direction;
-    private Rigidbody rb;
-    
+    private float handDirection = 0f;  // 손방향 회전값 저장
 
-    private Vector3 unitVector(D d) {
-        switch (d) {
-            case D.u:
-                return Vector3.forward;
-            case D.d:
-                return Vector3.back;
-            case D.l:
-                return Vector3.left;
-            case D.r:
-                return Vector3.right;
-            case D.ul:
-                return (Vector3.forward + Vector3.left) / Mathf.Sqrt(2);
-            case D.ur:  
-                return (Vector3.forward + Vector3.right) / Mathf.Sqrt(2);
-            case D.dl:
-                return (Vector3.back + Vector3.left) / Mathf.Sqrt(2);
-            case D.dr:
-                return (Vector3.back + Vector3.right) / Mathf.Sqrt(2);
-            default:
-                return Vector3.zero;
-        }
-    }
-
-    void keyboardInput() {
-        int x = (Input.GetKey(KeyCode.RightArrow) ? 1 : 0) - (Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
-        int z = (Input.GetKey(KeyCode.UpArrow) ? 1 : 0) - (Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
-        if (x == 0 && z == 0) {
-            direction = D.none;
-        } else if (x == 0) {
-            direction = z == 1 ? D.u : D.d;
-        } else if (z == 0) {
-            direction = x == 1 ? D.r : D.l;
-        } else {
-            direction = z == 1 ? (x == 1 ? D.ur : D.ul) : (x == 1 ? D.dr : D.dl);
-        }
-        if (Input.GetKeyDown(KeyCode.Space) && transform.position.y <= 10.1) {
-            jump();
-        }
-    }
-    void jump() {
-        rb.AddForce(Vector3.up * 15, ForceMode.Impulse);
-    }
-    
-    // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
-        transform.position = new Vector3(0, 10, 0);
-        direction = D.none;
-        isDashing = false;
-        rb = GetComponent<Rigidbody>();
+        inputActions = new PlayerInputActions();
+        moveAction = inputActions.Player.Move;
+        jumpAction = inputActions.Player.Jump;
+        dashAction = inputActions.Player.Dash;
+
+        moveAction.Enable();
+        jumpAction.Enable();
+        dashAction.Enable();
+
+        dashAction.performed += ctx => StartDash();
     }
 
-    // Update is called once per frame
+    private void OnEnable()
+    {
+        moveAction.Enable();
+        jumpAction.Enable();
+        dashAction.Enable();
+    }
+
+    private void OnDisable()
+    {
+        moveAction.Disable();
+        jumpAction.Disable();
+        dashAction.Disable();
+    }
+
     void Update()
     {
-        keyboardInput();
-        transform.position = transform.position + ((isDashing ? dashSpeed : baseSpeed) * Time.deltaTime * unitVector(direction));
+        moveInput = moveAction.ReadValue<Vector2>();
+
+        if (jumpAction.triggered)
+        {
+            Jump();
+        }
+
+        UpdateHandDirection();  // 손방향 업데이트
+        MovePlayer();
+    }
+
+    void MovePlayer()
+    {
+        float currentSpeed = isDashing ? dashSpeed : baseSpeed;
+        Vector3 movement = new Vector3(moveInput.x, 0, moveInput.y) * currentSpeed * Time.deltaTime;
+        transform.position += movement;
+
+        // 플레이어의 회전 적용
+        transform.rotation = Quaternion.Euler(0, handDirection, 0);
+
+        if (isDashing && Time.time > dashTime)
+        {
+            isDashing = false;
+        }
+    }
+
+    void Jump()
+    {
+        Debug.Log("Jump Pressed");
+    }
+
+    
+
+    void StartDash()
+    {
+        Debug.Log("Dash Activated!");
+        isDashing = true;
+        dashTime = Time.time + dashDuration;
+    }
+
+    void UpdateHandDirection()
+    {
+        if (moveInput.sqrMagnitude > 0.01f)  // 움직이는 중일 때만 회전
+        {
+            handDirection = Mathf.Atan2(moveInput.x, moveInput.y) * Mathf.Rad2Deg;
+        }
     }
 }
