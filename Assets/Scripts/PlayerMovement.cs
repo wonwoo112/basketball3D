@@ -18,6 +18,7 @@ public class PlayerMovement : MonoBehaviour
     private bool isDashing = false;
     private float dashTime;
     private float handDirection = 0f;  // 손방향 회전값 저장
+    Rigidbody rb;
 
     private void Awake()
     {
@@ -30,7 +31,10 @@ public class PlayerMovement : MonoBehaviour
         jumpAction.Enable();
         dashAction.Enable();
 
-        dashAction.performed += ctx => StartDash();
+        dashAction.started += ctx => StartDash();
+        dashAction.canceled += ctx => EndDash();
+        rb = GetComponent<Rigidbody>();
+        dashTime = dashDuration;
     }
 
     private void OnEnable()
@@ -59,7 +63,7 @@ public class PlayerMovement : MonoBehaviour
         UpdateHandDirection();  // 손방향 업데이트
         MovePlayer();
     }
-
+    
     void MovePlayer()
     {
         float currentSpeed = isDashing ? dashSpeed : baseSpeed;
@@ -69,15 +73,31 @@ public class PlayerMovement : MonoBehaviour
         // 플레이어의 회전 적용
         transform.rotation = Quaternion.Euler(0, handDirection, 0);
 
-        if (isDashing && Time.time > dashTime)
+        if (isDashing)
         {
-            isDashing = false;
+            dashTime -= Time.deltaTime;
+            if (dashTime <= 0)
+            {
+                EndDash();
+                dashTime = 0;
+            }
+        }
+        else
+        {
+            dashTime += 0.5f * Time.deltaTime;
+            if (dashTime >= dashDuration)
+            {
+                dashTime = dashDuration;
+            }
         }
     }
 
     void Jump()
     {
         Debug.Log("Jump Pressed");
+        if(transform.position.y <= 10.1) {
+            rb.AddForce(Vector3.up * 35, ForceMode.Impulse);
+        }
     }
 
     
@@ -86,7 +106,11 @@ public class PlayerMovement : MonoBehaviour
     {
         Debug.Log("Dash Activated!");
         isDashing = true;
-        dashTime = Time.time + dashDuration;
+    }
+    void EndDash()
+    {
+        Debug.Log("Dash Deactivated!");
+        isDashing = false;
     }
 
     void UpdateHandDirection()
