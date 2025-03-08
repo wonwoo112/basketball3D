@@ -67,8 +67,7 @@ public class PlayerMovement : MonoBehaviour
     void MovePlayer()
     {
         float currentSpeed = isDashing ? dashSpeed : baseSpeed;
-        Vector3 movement = new Vector3(moveInput.x, 0, moveInput.y) * currentSpeed * Time.deltaTime;
-        transform.position += movement;
+        rb.velocity = new Vector3(moveInput.x * currentSpeed, rb.velocity.y, moveInput.y * currentSpeed);
 
         // 플레이어의 회전 적용
         transform.rotation = Quaternion.Euler(0, handDirection, 0);
