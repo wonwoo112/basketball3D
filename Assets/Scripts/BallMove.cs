@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Xml.Serialization;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -17,6 +14,15 @@ public class BallMove : MonoBehaviour
     private InputAction shootAction;
     private InputAction passAction;
     private InputAction holdAction;
+    [SerializeField] private float cooltime;
+    // 쿨타임과 함께 누가 공을 마지막에 잡았는지도 저장해야 함
+    private GameObject player;
+    private Vector2 relPos;
+    private enum Hand {left, right, na};
+    private Hand holdingHand;
+    private Hand dribblingHand;
+    private float xSpeed;
+
     
 
     void Start()
@@ -34,26 +40,45 @@ public class BallMove : MonoBehaviour
         shootAction.Enable();
         passAction.Enable();
         holdAction.Enable();
+        player = null;
+        holdingHand = Hand.na;
+        dribblingHand = Hand.na;
+        xSpeed = 0f;
     }
     
     bool isPossessed() {
         return state != BallState.free;
     }
+    
 
     void OnCollisionEnter(Collision collision)
     {
-        Debug.Log("ball collision");
-        if (!isPossessed() && collision.gameObject.CompareTag("Player"))
+        if (!isPossessed() && collision.gameObject.CompareTag("Player") && cooltime <= 0)
         {
             // 플레이어의 BallHoldPoint 찾기
             holdPoint = collision.transform.Find("BallHoldPoint");
-            Debug.Log("AA");
             if (holdPoint != null)
             {
-                Debug.Log("Ball is held");
                 HoldBall();
+                player = collision.gameObject;
             }
         }
+    }
+    Vector3 To3D(Vector2 v) {
+        Vector3 leftHand = player.transform.Find("LeftHand").position;
+        Vector3 rightHand = player.transform.Find("RightHand").position;
+        Vector3 lerp = Vector3.Lerp(leftHand, rightHand, (v.x + 1) / 2);
+        return new Vector3(lerp.x, v.y, lerp.z);
+    }
+    float getNewRelX() {
+        float oldX = relPos.x;
+        if (holdingHand == dribblingHand) {
+            return dribblingHand == Hand.left ? -1.0f : 1.0f;
+        }
+        else {
+            return oldX + xSpeed * Time.deltaTime;
+        }
+        
     }
     void HoldBall()
     {
@@ -64,8 +89,19 @@ public class BallMove : MonoBehaviour
         transform.parent = holdPoint; // 공을 플레이어 손에 고정
         col.isTrigger = true; // 충돌 무시
     }
+    void ReleaseBall() {
+        state = BallState.free;
+        rb.isKinematic = false;
+        transform.parent = null;
+        col.isTrigger = false;
+        cooltime = 1.0f;
+    }
     void Update()
     {
+        if (cooltime > 0)
+        {
+            cooltime -= Time.deltaTime;
+        }
         if (shootAction.triggered)
         {
             Shoot();
@@ -88,18 +124,39 @@ public class BallMove : MonoBehaviour
         }
     }
     void Shoot() {
-        state = BallState.free;
+        if (isPossessed()) {
+            ReleaseBall();
+        }
     }
     void Pass() {
-        state = BallState.free;
+        if (isPossessed()) {
+            ReleaseBall();
+        }
     }
     void Hold() {
-        state = BallState.held;
+        if (state == BallState.dribbled) {
+            state = BallState.held;
+        }
     }
     void DribbleLeft() {
-        state = BallState.dribbled;
+        if (state == BallState.held || state == BallState.dribbled) {
+            state = BallState.dribbled;
+            relPos = new Vector2(-1, 0);
+            if (holdingHand != Hand.right) {
+                holdingHand = Hand.left;
+            }
+            dribblingHand = Hand.left;
+        }
     }
+
     void DribbleRight() {
-        state = BallState.dribbled;
+        if (state == BallState.held || state == BallState.dribbled) {
+            state = BallState.dribbled;
+            relPos = new Vector2(1, 0);
+            if (holdingHand != Hand.left) {
+                holdingHand = Hand.right;
+            }
+            dribblingHand = Hand.right;
+        }
     }
 }
