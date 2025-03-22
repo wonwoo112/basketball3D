@@ -17,13 +17,10 @@ public class BallMove : MonoBehaviour
     [SerializeField] private float cooltime;
     // 쿨타임과 함께 누가 공을 마지막에 잡았는지도 저장해야 함
     private GameObject player;
+    private BallDribble ballDribble;
+    private bool leftPressed;
+    private bool rightPressed;
     private Vector2 relPos;
-    private enum Hand {left, right, na};
-    private Hand holdingHand;
-    private Hand dribblingHand;
-    private float xSpeed;
-
-    
 
     void Start()
     {
@@ -41,9 +38,8 @@ public class BallMove : MonoBehaviour
         passAction.Enable();
         holdAction.Enable();
         player = null;
-        holdingHand = Hand.na;
-        dribblingHand = Hand.na;
-        xSpeed = 0f;
+        ballDribble = new BallDribble();
+        relPos = new Vector2(0.0f, 0.0f);
     }
     
     bool isPossessed() {
@@ -70,16 +66,6 @@ public class BallMove : MonoBehaviour
         Vector3 lerp = Vector3.Lerp(leftHand, rightHand, (v.x + 1) / 2);
         return new Vector3(lerp.x, v.y, lerp.z);
     }
-    float getNewRelX() {
-        float oldX = relPos.x;
-        if (holdingHand == dribblingHand) {
-            return dribblingHand == Hand.left ? -1.0f : 1.0f;
-        }
-        else {
-            return oldX + xSpeed * Time.deltaTime;
-        }
-        
-    }
     void HoldBall()
     {
         state = BallState.recieved;
@@ -98,6 +84,8 @@ public class BallMove : MonoBehaviour
     }
     void Update()
     {
+        leftPressed = false;
+        rightPressed = false;
         if (cooltime > 0)
         {
             cooltime -= Time.deltaTime;
@@ -122,6 +110,13 @@ public class BallMove : MonoBehaviour
         {
             DribbleRight();
         }
+        if (state == BallState.dribbled) {
+            relPos = ballDribble.Update(leftPressed, rightPressed, relPos, Time.deltaTime);
+            transform.position = To3D(relPos);
+            if (ballDribble.isDribblingGetter() == false) {
+                ReleaseBall();
+            }
+        }
     }
     void Shoot() {
         if (isPossessed()) {
@@ -139,24 +134,26 @@ public class BallMove : MonoBehaviour
         }
     }
     void DribbleLeft() {
-        if (state == BallState.held || state == BallState.dribbled) {
+        if(state == BallState.recieved || state == BallState.dribbled) {
+            ballDribble.isDribblingSetter(true);
+            leftPressed = true;
             state = BallState.dribbled;
-            relPos = new Vector2(-1, 0);
-            if (holdingHand != Hand.right) {
-                holdingHand = Hand.left;
+            if (state == BallState.recieved) {
+                relPos = new Vector2(-1.0f, 0.0f);
+                ballDribble.holdingHand = BallDribble.Direction.left;
             }
-            dribblingHand = Hand.left;
         }
     }
 
     void DribbleRight() {
-        if (state == BallState.held || state == BallState.dribbled) {
+        if(state == BallState.recieved || state == BallState.dribbled) {
+            ballDribble.isDribblingSetter(true);
+            rightPressed = true;
             state = BallState.dribbled;
-            relPos = new Vector2(1, 0);
-            if (holdingHand != Hand.left) {
-                holdingHand = Hand.right;
+            if (state == BallState.recieved) {
+                relPos = new Vector2(1.0f, 0.0f);
+                ballDribble.holdingHand = BallDribble.Direction.right;
             }
-            dribblingHand = Hand.right;
         }
     }
 }
