@@ -4,13 +4,13 @@ using UnityEngine;
 public class BallDribble
 {
     public const float initUpperBound = 1.0f;
-    public const float initBallSpeed = 0.5f;
-    public const float minDribbleHeight = 0.0f;
-    private bool isDribbling;
+    public const float initBallSpeed = 1.5f;
+    public const float minDribbleHeight = -0.5f;
+    public bool isDribbling;
     private float upperBound;
     private float ballSpeed;
     private bool goingUp;
-    private const float lowerBound = -0.775f;
+    private const float lowerBound = -0.9f;
     private bool leftDribble;
     private bool rightDribble;
     public Direction holdingHand;
@@ -50,48 +50,38 @@ public class BallDribble
     }
     float getNewX(Vector2 oldPos, float dt) {
         // function for getting the new x position of the ball
-        if (isDribbling) {
-            float oldX = oldPos.x, newX;
-            if (holdingHand == dribblingDirection) {
-                newX = targetX(dribblingDirection);
-            }
-            else {
-                newX = oldX + xSpeed * dt;
-            }
-            return newX;
+        float oldX = oldPos.x, newX;
+        if (holdingHand == dribblingDirection) {
+            newX = targetX(dribblingDirection);
         }
         else {
-            return oldPos.x;
+            newX = oldX + xSpeed * dt;
         }
+        return newX;
     }
     float getNewY(Vector2 oldPos, float dt) {
         // function for getting the new y position of the ball 
-        if (isDribbling) {
-            float oldY = oldPos.y, newY;
-            if (goingUp) {
-                newY = oldY + ballSpeed * dt;
-                
-                if (newY > initUpperBound) {
-                    newY = initUpperBound;
-                    isDribbling = false;
-                }
+        
+        float oldY = oldPos.y, newY;
+        if (goingUp) {
+            newY = oldY + ballSpeed * dt;
+            
+            if (newY > initUpperBound) {
+                newY = initUpperBound;
+                isDribbling = false;
             }
-            else {
-                newY = oldY - ballSpeed * dt;
-                if (newY <= lowerBound) {
-                    newY = lowerBound;
-                }   
-            }
-            return newY;
         }
         else {
-            return initUpperBound;
+            newY = oldY - ballSpeed * dt;
+            if (newY <= lowerBound) {
+                newY = lowerBound;
+            }   
         }
+        return newY;
         
     }
     void updateState(float newY) {
         // function for updating the state of the ball 
-        if (!isDribbling) return;
         if (goingUp) {    
             if (leftDribble) {
                 upperBound = newY;
@@ -121,12 +111,6 @@ public class BallDribble
         upperBound = initUpperBound;
         isDribbling = false;
         xSpeed = 0.0f;
-    }
-    public void isDribblingSetter(bool value) {
-        isDribbling = value;
-    }
-    public bool isDribblingGetter() {
-        return isDribbling;
     }
     public Vector2 Update(bool leftPressed, bool rightPressed, Vector2 oldPos, float dt)
     {
