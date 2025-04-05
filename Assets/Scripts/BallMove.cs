@@ -51,7 +51,7 @@ public class BallMove : MonoBehaviour
         if (!isPossessed() && collision.gameObject.CompareTag("Player") && cooltime <= 0)
         {
             player = collision.gameObject;
-            HoldBall();
+            HoldBall(false);
         }
     }
     Vector3 To3D(Vector2 v) {
@@ -61,9 +61,16 @@ public class BallMove : MonoBehaviour
         float y = player.transform.position.y + v.y * player.transform.localScale.y;
         return new Vector3(lerp.x, y, lerp.z);
     }
-    void HoldBall()
+    void HoldBall(bool whileDribbling)
     {
-        state = BallState.recieved;
+        if (whileDribbling) {
+            state = BallState.held;
+            player.GetComponent<PlayerMovement>().state = PlayerMovement.PlayerState.held;
+        }
+        else {
+            state = BallState.recieved;
+            player.GetComponent<PlayerMovement>().state = PlayerMovement.PlayerState.recieved;
+        }
         rb.isKinematic = true; // 물리 효과 제거
         rb.velocity = Vector3.zero;
         transform.parent = player.transform;
@@ -73,6 +80,8 @@ public class BallMove : MonoBehaviour
     }
     void ReleaseBall() {
         state = BallState.free;
+        player.GetComponent<PlayerMovement>().state = PlayerMovement.PlayerState.free;
+        player = null;
         rb.isKinematic = false;
         transform.parent = null;
         col.isTrigger = false;
@@ -84,15 +93,15 @@ public class BallMove : MonoBehaviour
         Transform rightHand = player.transform.Find("RightHand");
         if (state == BallState.dribbled) {
             if (ballDribble.holdingHand == BallDribble.Direction.left) {
-                float y = transform.position.y > -0.1f ? transform.position.y + 0.1f : transform.position.y;
+                float y = transform.position.y > 10.0f ? transform.position.y + 0.1f : leftHand.position.y;
                 leftHand.position = new Vector3 (leftHand.position.x, y, leftHand.position.z);
             }
             if (ballDribble.holdingHand == BallDribble.Direction.right) {
-                float y = transform.position.y > -0.1f ? transform.position.y + 0.1f : transform.position.y;
+                float y = transform.position.y > 10.0f ? transform.position.y + 0.1f : rightHand.position.y;
                 rightHand.position = new Vector3 (rightHand.position.x, y, rightHand.position.z);
             }
         }
-        else {
+         else{
            leftHand.position = new Vector3 (leftHand.position.x, player.transform.position.y, leftHand.position.z);
            rightHand.position = new Vector3 (rightHand.position.x, player.transform.position.y, rightHand.position.z); 
         }
@@ -149,14 +158,14 @@ public class BallMove : MonoBehaviour
     }
     void Hold() {
         if (state == BallState.dribbled) {
-            state = BallState.held;
-            HoldBall();
+            HoldBall(true);
             ballDribble.isDribbling = false;
         }
     }
     void DribbleLeft() {
         if(state == BallState.recieved || state == BallState.dribbled) {
             ballDribble.isDribbling = true;
+            player.GetComponent<PlayerMovement>().state = PlayerMovement.PlayerState.dribbled;
             leftPressed = true;
             state = BallState.dribbled;
             if (state == BallState.recieved) {
@@ -169,6 +178,7 @@ public class BallMove : MonoBehaviour
     void DribbleRight() {
         if(state == BallState.recieved || state == BallState.dribbled) {
             ballDribble.isDribbling = true;
+            player.GetComponent<PlayerMovement>().state = PlayerMovement.PlayerState.dribbled;
             rightPressed = true;
             state = BallState.dribbled;
             if (state == BallState.recieved) {

@@ -2,13 +2,14 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+
 public class PlayerMovement : MonoBehaviour
 {
     [SerializeField] private float baseSpeed;
     [SerializeField] private float dashSpeed;
     [SerializeField] private float dashDuration;
-
-
+    public enum PlayerState {recieved, dribbled, held, free};
+    public PlayerState state = PlayerState.free;
     private PlayerInputActions inputActions;
     private Vector2 moveInput;
     private InputAction moveAction;
@@ -93,9 +94,11 @@ public class PlayerMovement : MonoBehaviour
 
     void Jump()
     {
-        Debug.Log("Jump Pressed");
-        if(transform.position.y <= 10.1) {
-            rb.AddForce(Vector3.up * 35, ForceMode.Impulse);
+        if (state != PlayerState.dribbled) {
+            Debug.Log("Jump Pressed");
+            if(transform.position.y <= 10.1) {
+                rb.AddForce(Vector3.up * 35, ForceMode.Impulse);
+            }  
         }
     }
 
