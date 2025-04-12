@@ -149,6 +149,16 @@ public class BallMove : MonoBehaviour
     void Shoot() {
         if (isPossessed()) {
             ReleaseBall();
+            Vector3 targetPos = GameObject.Find("PlusTopCollider").transform.position + new Vector3(0.0f, 0.7f, 0.0f);
+            Vector3 diff = targetPos - transform.position;
+            float timeToTarget = 2.0f;
+            Vector3 diffXZ = new Vector3(diff.x, 0f, diff.z);
+            Vector3 velocityXZ = diffXZ / timeToTarget;
+            float g = Mathf.Abs(Physics.gravity.y);
+            float velocityY = (diff.y + 0.5f * g * timeToTarget * timeToTarget) / timeToTarget;
+            Vector3 finalVelocity = velocityXZ + Vector3.up * velocityY;
+            rb.velocity = Vector3.zero; 
+            rb.AddForce(finalVelocity, ForceMode.VelocityChange);
         }
     }
     void Pass() {
